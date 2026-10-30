@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# CODEX v4 ARGON - Elite AI Code Engine & Ethical Hacker
+# CODEX v2 - Termux AI Code Engine
 import os, sys, json, re, time, subprocess, difflib, shutil, random, threading, urllib.request, urllib.error
 
 BASE  = os.path.expanduser("~/codex")
@@ -7,15 +7,16 @@ PROJ  = os.path.join(BASE, "projects")
 BAK   = os.path.join(BASE, "backups")
 KEYF  = os.path.join(BASE, ".apikey")
 OUT   = "/sdcard/Codex"
-MODEL = "gemini-1.5-pro-latest" # High Thinking Level Model
+MODEL = "gemini-3.5-flash-lite"
 STREAM_URL = "https://generativelanguage.googleapis.com/v1beta/models/%s:streamGenerateContent?alt=sse"
 
-# ARGON THEME COLORS
 R="\033[0m"; B="\033[1m"; DIM="\033[2m"; STRIKE="\033[9m"
-RED="\033[91m"; GRN="\033[92m"; YEL="\033[93m"
-CYN="\033[96m"; BLU="\033[94m"; PRP="\033[95m"; GRY="\033[90m"; WHT="\033[97m"
-DCYN="\033[36m" # Dark Cyan for borders
-DBG_CYN="\033[48;5;23m"; DBG_GRN="\033[48;5;22m"; DBG_YEL="\033[48;5;58m"; DBG_RED="\033[48;5;52m"
+RED="\033[91m"; DRED="\033[31m"; GRN="\033[92m"; YEL="\033[93m"
+CYN="\033[96m"; GRY="\033[90m"; WHT="\033[97m"; MAG="\033[95m"
+DBG_RED="\033[48;5;52m"
+DBG_GRN="\033[48;5;22m"
+DBG_YEL="\033[48;5;58m"
+DBG_CYN="\033[48;5;23m"
 
 def w(s): sys.stdout.write(s); sys.stdout.flush()
 def cls(): os.system("clear")
@@ -23,15 +24,12 @@ def cols():
     try: return max(40, shutil.get_terminal_size().columns)
     except Exception: return 60
 
-# UPGRADED ELITE SYSTEM PROMPT
 SYSTEM = (
- "You are CODEX v4 ARGON, an Elite Senior Software Engineer, Master Web Developer, and Top-Tier Ethical Hacker. "
- "Your thinking level is exceptionally high. You write production-grade, highly secure, modular, and flawlessly optimized code. "
- "As an ethical hacker, you proactively ensure all code is hardened against vulnerabilities (XSS, SQLi, CSRF, Buffer Overflows, etc.). "
+ "You are Codex, an elite software engineer inside Termux on Android. "
  "Output ONE complete working program. Format EXACTLY: first line 'FILENAME: name.ext', "
  "then ONE fenced code block with the full code, nothing else after it. "
- "HTML: single file, inline CSS/JS, breathtaking modern UI, fully responsive. Python: stdlib only, highly optimized. "
- "C++: C++17, secure memory management. "
+ "HTML: single file, inline CSS/JS, clean modern mobile UI. Python: stdlib only. "
+ "C++: C++17, must compile with clang++ in Termux, no external libs. "
  "No placeholders, no explanations, always return the COMPLETE file."
 )
 
@@ -41,13 +39,13 @@ BANNER = r"""
  ██║     ██║   ██║██║  ██║█████╗   ╚███╔╝ 
  ██║     ██║   ██║██║  ██║██╔══╝   ██╔██╗ 
  ╚██████╗╚██████╔╝██████╔╝███████╗██╔╝ ██╗
-  ╚═════╝ ╚═════╝ ╚═════╝ ╚══════╝╚═╝  ╚═╝
-        v4 ARGON • ELITE EDITION"""
+  ╚═════╝ ╚═════╝ ╚═════╝ ╚══════╝╚═╝  ╚═╝"""
 
 STATS = {"runs": 0, "lines": 0, "fixes": 0, "start": time.time()}
 
-# ---------- ARGON (Cyan/Blue) shading loop effects ----------
-SHADES = [27, 33, 39, 45, 51, 87, 123, 87, 51, 45, 39, 33]
+
+# ---------- red shading loop effects ----------
+SHADES = [52, 88, 124, 160, 196, 203, 210, 203, 196, 160, 124, 88]
 def sh(n): return "\033[38;5;%dm" % n
 
 def shaded_banner_frame(lines, phase):
@@ -55,12 +53,14 @@ def shaded_banner_frame(lines, phase):
     for ln in lines:
         row = ""
         for x, ch in enumerate(ln):
-            if ch == " ": row += ch
-            else: row += sh(SHADES[(x // 2 + phase) % len(SHADES)]) + B + ch
+            if ch == " ":
+                row += ch
+            else:
+                row += sh(SHADES[(x // 2 + phase) % len(SHADES)]) + B + ch
         out.append(row + R)
     return out
 
-def color_wave(seconds=3.0, fps=14):
+def red_wave(seconds=3.0, fps=14):
     lines = BANNER.strip("\n").split("\n")
     h = len(lines)
     frames = int(seconds * fps)
@@ -74,6 +74,27 @@ def color_wave(seconds=3.0, fps=14):
     finally:
         w("\033[?25h")
 
+def pulse_line(seconds=1.5, fps=16):
+    width = min(cols() - 2, 44)
+    w("\033[?25l")
+    try:
+        for f in range(int(seconds * fps)):
+            row = ""
+            for x in range(width):
+                row += sh(SHADES[(x + f) % len(SHADES)]) + "\u2501"
+            w("\r" + row + R)
+            time.sleep(1.0 / fps)
+        w("\n")
+    finally:
+        w("\033[?25h")
+
+def shade_bar(pct, width=20):
+    fill = int(width * pct / 100)
+    row = ""
+    for i in range(width):
+        row += (sh(SHADES[(i * 2) % len(SHADES)]) + "\u2588") if i < fill else (GRY + "\u2591")
+    return row + R + " %3d%%" % pct
+
 def banner(anim=True):
     cls()
     lines = BANNER.split("\n")
@@ -83,26 +104,27 @@ def banner(anim=True):
             cls()
             for ln in lines:
                 g = "".join(random.choice(glitch) if (c != " " and random.random() < 0.3 * (4 - f) / 4) else c for c in ln)
-                w(CYN + B + g + R + "\n")
+                w(RED + B + g + R + "\n")
             time.sleep(0.08)
         cls()
         w("\n")
-        color_wave(2.6)
+        red_wave(2.6)
     else:
-        for ln in lines: w(CYN + B + ln + R + "\n")
-    w(DCYN + " " + "═" * 45 + "\n" + R)
-    w(GRY + "  [ ELITE AI & ETHICAL HACKER ]  " + CYN + MODEL + R + "\n")
-    w(DCYN + " " + "═" * 45 + "\n" + R)
-    w(GRY + " /new /paste /open /show /edit /fix /run /audit\n /serve /save /undo /list /stats /key /quit\n\n" + R)
+        for ln in lines:
+            w(RED + B + ln + R + "\n")
+    w(DRED + " " + "═" * 42 + "\n" + R)
+    w(GRY + "  [ AI CODE ENGINE v2 ]  " + RED + MODEL + R + "\n")
+    w(DRED + " " + "═" * 42 + "\n" + R)
+    w(GRY + " /new /paste /open /show /edit /fix /run\n /save /undo /list /stats /key /quit\n\n" + R)
 
 SPIN = "⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏"
-def bar(pct, width=24, color=CYN):
+def bar(pct, width=24, color=RED):
     pct = max(0, min(100, pct))
     fill = int(width * pct / 100)
     return color + "█" * fill + GRY + "░" * (width - fill) + R + " %3d%%" % pct
 
 class Loader:
-    def __init__(self, label, color=CYN):
+    def __init__(self, label, color=RED):
         self.label, self.color, self.pct = label, color, 0
         self.run = False; self.t = None
     def _loop(self):
@@ -136,15 +158,16 @@ def pipeline_panel(state):
         elif st == "err": parts.append(RED + "✖ " + s + R)
         elif st == "skip":parts.append(GRY + "– " + s + R)
         else:             parts.append(GRY + "○ " + s + R)
-    w("\n" + DCYN + "┌" + "─" * 40 + "┐\n" + R)
-    w(DCYN + "│ " + R + "  ".join(parts[:3]) + "\n")
-    w(DCYN + "│ " + R + "  ".join(parts[3:]) + "\n")
-    w(DCYN + "└" + "─" * 40 + "┘\n" + R)
+    w("\n" + DRED + "┌" + "─" * 40 + "┐\n" + R)
+    w(DRED + "│ " + R + "  ".join(parts[:3]) + "\n")
+    w(DRED + "│ " + R + "  ".join(parts[3:]) + "\n")
+    w(DRED + "└" + "─" * 40 + "┘\n" + R)
 
 STRIP = {
     "new":  (GRN, DBG_GRN, "▌"),
-    "mod":  (CYN, DBG_CYN, "▌"),
+    "mod":  (YEL, DBG_YEL, "▌"),
     "err":  (RED, DBG_RED, "▌"),
+    "chk":  (CYN, DBG_CYN, "▌"),
     "same": (GRY, "",      "│"),
 }
 def render_line(n, text, kind="same", width=None):
@@ -160,21 +183,21 @@ def show_file(path, marks=None, start=1, end=None):
     marks = marks or {}
     lines = open(path, errors="ignore").read().split("\n")
     end = end or len(lines)
-    w(DCYN + "╭─ " + WHT + os.path.basename(path) + GRY + "  (%d lines)\n" % len(lines) + R)
+    w(DRED + "╭─ " + WHT + os.path.basename(path) + GRY + "  (%d lines)\n" % len(lines) + R)
     for i in range(start, min(end, len(lines)) + 1):
         w(render_line(i, lines[i-1], marks.get(i, "same")) + "\n")
-    w(DCYN + "╰" + "─" * 30 + "\n" + R)
+    w(DRED + "╰" + "─" * 30 + "\n" + R)
 
 def get_key():
     if os.path.exists(KEYF): return open(KEYF).read().strip()
-    k = input(CYN + "[?] API key paste karein: " + R).strip()
+    k = input(RED + "[?] API key paste karein: " + R).strip()
     open(KEYF, "w").write(k); os.chmod(KEYF, 0o600)
     return k
 
 def stream_ai(history, key):
     body = {"systemInstruction": {"parts": [{"text": SYSTEM}]},
             "contents": history,
-            "generationConfig": {"temperature": 0.4, "maxOutputTokens": 8192}}
+            "generationConfig": {"temperature": 0.3, "maxOutputTokens": 8192}}
     req = urllib.request.Request(STREAM_URL % MODEL, data=json.dumps(body).encode(),
           headers={"Content-Type": "application/json", "x-goog-api-key": key})
     try:
@@ -204,10 +227,10 @@ def live_write(history, key, old_code=None):
     full = ""; buf = ""; ln = 0; in_code = False
     old_lines = old_code.split("\n") if old_code else []
     w("\n")
-    L = Loader("THINKING", CYN); L.start()
+    L = Loader("WRITE", RED); L.start()
     time.sleep(0.4)
-    L.stop(True, "stream started")
-    w(DCYN + "╭─ " + WHT + "LIVE CODE" + GRY + "  strip: " + GRN + "▌new " + CYN + "▌changed " + GRY + "│same\n" + R)
+    L.stop(True, "stream shuru")
+    w(DRED + "╭─ " + WHT + "LIVE CODE" + GRY + "  strip: " + GRN + "▌new " + YEL + "▌changed " + GRY + "│same\n" + R)
     for chunk in stream_ai(history, key):
         if "@@ERROR@@" in chunk: return None, chunk
         full += chunk; buf += chunk
@@ -223,39 +246,31 @@ def live_write(history, key, old_code=None):
             else: kind = "new"
             w(render_line(ln, line, kind) + "\n")
             STATS["lines"] += 1
-            time.sleep(0.01)
-    w(DCYN + "╰" + "─" * 30 + "\n" + R)
+            time.sleep(0.012)
+    w(DRED + "╰" + "─" * 30 + "\n" + R)
     return full, None
-
-def chat_only(history, key):
-    w("\n" + DCYN + "╭─ " + CYN + B + "SECURITY AUDIT & REPORT" + R + "\n")
-    full = ""
-    for chunk in stream_ai(history, key):
-        if "@@ERROR@@" in chunk: w(RED + chunk + R); return
-        w(chunk)
-        full += chunk
-    w("\n" + DCYN + "╰" + "─" * 30 + "\n" + R)
-    return full
 
 def show_diff(old, new):
     o, n = old.split("\n"), new.split("\n")
     sm = difflib.SequenceMatcher(None, o, n)
     added = removed = 0
-    w("\n" + DCYN + "╭─ " + WHT + "DIFF" + GRY + "  (old vs new)\n" + R)
+    w("\n" + DRED + "╭─ " + WHT + "DIFF" + GRY + "  (old vs new)\n" + R)
     for tag, i1, i2, j1, j2 in sm.get_opcodes():
         if tag == "equal": continue
         for k, x in enumerate(o[i1:i2]):
             w(RED + B + "▌" + R + GRY + "%4d " % (i1 + k + 1) + R + DBG_RED + RED + STRIKE + x[:cols()-9] + R + "\n"); removed += 1
         for k, x in enumerate(n[j1:j2]):
             w(GRN + B + "▌" + R + GRY + "%4d " % (j1 + k + 1) + R + DBG_GRN + WHT + x[:cols()-9] + R + "\n"); added += 1
-        time.sleep(0.01)
-    w(DCYN + "╰" + R + GRY + " +%d / -%d lines\n" % (added, removed) + R)
+        time.sleep(0.02)
+    w(DRED + "╰" + R + GRY + " +%d / -%d lines\n" % (added, removed) + R)
 
 def parse_error_lines(log, path):
     base = os.path.basename(path)
     nums = set()
-    for m in re.finditer(r'File "[^"]*%s", line (\d+)' % re.escape(base), log): nums.add(int(m.group(1)))
-    for m in re.finditer(r"%s:(\d+):(\d+)?" % re.escape(base), log): nums.add(int(m.group(1)))
+    for m in re.finditer(r'File "[^"]*%s", line (\d+)' % re.escape(base), log):
+        nums.add(int(m.group(1)))
+    for m in re.finditer(r"%s:(\d+):(\d+)?" % re.escape(base), log):
+        nums.add(int(m.group(1)))
     return sorted(nums)
 
 def debug_view(path, log):
@@ -270,7 +285,10 @@ def debug_view(path, log):
                 shown.add(i)
                 w(render_line(i, lines[i-1], "err" if i == e else "same") + "\n")
                 if i == e:
-                    msg = next((ln.strip() for ln in log.split("\n") if "error" in ln.lower()), "")
+                    msg = ""
+                    for ln in log.split("\n"):
+                        if "error" in ln.lower():
+                            msg = ln.strip(); break
                     w(RED + " " * 6 + "└─► " + msg[:cols()-12] + R + "\n")
             w(GRY + "  ···\n" + R)
     else:
@@ -324,22 +342,26 @@ def export(path):
         shutil.copy(path, dst)
         L.stop(True, dst)
         return True
-    except Exception:
+    except Exception as e:
         L.stop(False, "termux-setup-storage chalayein")
         return False
 
 def pipeline(history, key, old_code=None):
-    state = {"WRITE": "run"}; pipeline_panel(state)
+    state = {}
+    state["WRITE"] = "run"; pipeline_panel(state)
     full, err = live_write(history, key, old_code)
     if err:
-        state["WRITE"] = "err"; pipeline_panel(state); w(RED + err + R + "\n"); return None
+        state["WRITE"] = "err"; pipeline_panel(state)
+        w(RED + err + R + "\n"); return None
     name, code = extract(full)
     history.append({"role": "model", "parts": [{"text": full}]})
     state["WRITE"] = "ok"
     if old_code is not None: show_diff(old_code, code)
 
-    os.makedirs(PROJ, exist_ok=True); path = os.path.join(PROJ, name)
-    backup(path); timed_stage("SAVE", 0.4, GRN, True, path)
+    os.makedirs(PROJ, exist_ok=True)
+    path = os.path.join(PROJ, name)
+    backup(path)
+    timed_stage("SAVE", 0.4, GRN, True, path)
     open(path, "w").write(code); state["SAVE"] = "ok"
 
     ok = False
@@ -347,41 +369,51 @@ def pipeline(history, key, old_code=None):
         timed_stage("CHECK", 0.6, CYN, True, "syntax scan")
         ok, log = check_only(path)
         if ok:
-            state["CHECK"] = "ok"; L = Loader("BUILD", CYN); L.start()
+            state["CHECK"] = "ok"
+            L = Loader("BUILD", CYN); L.start()
             for i in range(0, 101, 5): L.set(i); time.sleep(0.03)
-            ok, log = build(path); L.stop(ok, "compile/interpret")
+            ok, log = build(path)
+            L.stop(ok, "compile/interpret")
             if ok: state["BUILD"] = "ok"; break
             state["BUILD"] = "err"
-        else: state["CHECK"] = "err"
+        else:
+            state["CHECK"] = "err"
         debug_view(path, log)
         state["FIX"] = "run"; STATS["fixes"] += 1
-        w(YEL + "[FIX] AI Auto-Hacker is fixing the bug (attempt %d/3)\n" % attempt + R)
-        history.append({"role": "user", "parts": [{"text": "Yeh error aaya. Poori fixed file do (same format):\n" + log[:1800]}]})
-        old = code; full, err = live_write(history, key, old)
+        w(YEL + "[FIX] AI se fix ho raha hai (attempt %d/3)\n" % attempt + R)
+        history.append({"role": "user", "parts": [{"text":
+            "Yeh error aaya. Poori fixed file do (same format):\n" + log[:1800]}]})
+        old = code
+        full, err = live_write(history, key, old)
         if err: state["FIX"] = "err"; w(RED + err + R + "\n"); break
         history.append({"role": "model", "parts": [{"text": full}]})
-        _, code = extract(full); show_diff(old, code)
-        open(path, "w").write(code); state["FIX"] = "ok"
-    
-    if ok: w(GRN + B + "\n✔ PASS: All checks clear. Code is secure.\n" + R)
-    else: w(YEL + "\n⚠ 3 attempts failed. Use /edit or /fix to retry.\n" + R)
-    
+        _, code = extract(full)
+        show_diff(old, code)
+        open(path, "w").write(code)
+        state["FIX"] = "ok"
+    if ok:
+        w(GRN + B + "\n✔ PASS: sab checks clear\n" + R)
+    else:
+        w(YEL + "\n⚠ 3 attempts ke baad bhi error. /fix ya /edit se dobara try karein\n" + R)
     if not state.get("BUILD"): state["BUILD"] = "skip" if ok else "err"
     state["EXPORT"] = "ok" if export(path) else "err"
-    pipeline_panel(state); STATS["runs"] += 1
+    pipeline_panel(state)
+    STATS["runs"] += 1
     return path
 
 def run_file(path):
     ext = os.path.splitext(path)[1]
-    w(CYN + B + "\n[EXEC] " + R + os.path.basename(path) + "\n" + DCYN + "─" * 30 + R + "\n")
+    w(CYN + B + "\n[EXEC] " + R + os.path.basename(path) + "\n" + DRED + "─" * 30 + R + "\n")
     try:
         if ext == ".py": subprocess.call(["python", path])
         elif ext == ".cpp":
             exe = path[:-4]
             if not os.path.exists(exe): build(path)
             subprocess.call([exe])
-        elif ext in (".html", ".htm"): subprocess.call(["termux-open", path])
-    except Exception as e: w(RED + str(e) + R + "\n")
+        elif ext in (".html", ".htm"):
+            subprocess.call(["termux-open", path])
+    except Exception as e:
+        w(RED + str(e) + R + "\n")
 
 def multiline(prompt):
     w(YEL + prompt + "\n(khatam karne ke liye nayi line par END)\n" + R)
@@ -395,20 +427,21 @@ def multiline(prompt):
 
 def stats():
     up = int(time.time() - STATS["start"])
-    w(DCYN + "╭─ " + WHT + "ELITE STATS\n" + R)
-    w(GRY + "│ runs: " + WHT + str(STATS["runs"]) + GRY + "  lines written: " + WHT + str(STATS["lines"]) +
+    w(DRED + "╭─ " + WHT + "STATS\n" + R)
+    w(GRY + "│ runs: " + WHT + str(STATS["runs"]) + GRY + "  lines: " + WHT + str(STATS["lines"]) +
       GRY + "  auto-fixes: " + WHT + str(STATS["fixes"]) + GRY + "  uptime: " + WHT + "%ds\n" % up + R)
-    w(DCYN + "╰" + "─" * 30 + "\n" + R)
+    w(DRED + "╰" + "─" * 30 + "\n" + R)
 
 def main():
     os.makedirs(PROJ, exist_ok=True); os.makedirs(BAK, exist_ok=True)
     key = get_key(); banner()
     history, current = [], None
     while True:
-        try: u = input(CYN + B + "argon" + R + GRY + "@codex" + R + CYN + " ❯ " + R).strip()
+        try: u = input(RED + B + "codex" + R + GRY + "@termux" + R + RED + " ❯ " + R).strip()
         except (EOFError, KeyboardInterrupt): print(); break
         if not u: continue
-        cmd, arg = u.split()[0], u[len(u.split()[0]):].strip()
+        cmd = u.split()[0]
+        arg = u[len(cmd):].strip()
 
         if cmd == "/quit": break
         if cmd == "/new": history, current = [], None; banner(False); continue
@@ -417,32 +450,14 @@ def main():
             if os.path.exists(KEYF): os.remove(KEYF)
             key = get_key(); continue
         if cmd == "/list":
-            for f in sorted(os.listdir(PROJ)): w("  " + CYN + f + GRY + "  %d B\n" % os.path.getsize(os.path.join(PROJ, f)) + R)
+            for f in sorted(os.listdir(PROJ)):
+                w("  " + CYN + f + GRY + "  %d B\n" % os.path.getsize(os.path.join(PROJ, f)) + R)
             continue
         if cmd == "/show":
             p = current if not arg else (arg if os.path.isabs(arg) else os.path.join(PROJ, arg))
             if p and os.path.exists(p): show_file(p)
             else: w(YEL + "File nahi mili\n" + R)
             continue
-        
-        # --- NEW WEB DEVELOPER FEATURE ---
-        if cmd == "/serve":
-            if not current or not current.endswith(('.html', '.htm')):
-                w(YEL + "[!] Pehle koi HTML file open karein (/open file.html)\n" + R); continue
-            w(CYN + "▶ Starting Local Development Server on port 8080...\n" + R)
-            subprocess.Popen(["python", "-m", "http.server", "8080", "--directory", PROJ], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-            w(GRN + f"✔ Server Running! Open your browser at: http://localhost:8080/{os.path.basename(current)}\n" + R)
-            continue
-
-        # --- NEW ETHICAL HACKER FEATURE ---
-        if cmd == "/audit":
-            if not current: w(YEL + "[!] Pehle file open karein\n" + R); continue
-            code = open(current).read()
-            audit_hist = [{"role": "user", "parts": [{"text": f"Act as an Elite Ethical Hacker and Senior Security Auditor. Audit the following code for vulnerabilities (XSS, SQLi, Buffer Overflows, Logic flaws). Provide a detailed professional security report. File: {os.path.basename(current)}\n\n```\n{code}\n```"}]}]
-            w(PRP + B + "[AUDIT] Initiating Deep Security Scan...\n" + R)
-            chat_only(audit_hist, key)
-            continue
-
         if cmd == "/run":
             run_file(current) if current else w(YEL + "Pehle project banayein\n" + R); continue
         if cmd == "/save":
@@ -456,7 +471,7 @@ def main():
             continue
         if cmd == "/paste":
             code = multiline("[PASTE] apna code paste karein")
-            name = input(CYN + "[?] filename (jaise app.py): " + R).strip() or "pasted.py"
+            name = input(RED + "[?] filename (jaise app.py): " + R).strip() or "pasted.py"
             current = os.path.join(PROJ, name)
             open(current, "w").write(code)
             w(GRN + "Saved: %s (%d lines)\n" % (current, code.count("\n")) + R)
@@ -473,16 +488,21 @@ def main():
             ok, log = check_only(current)
             if ok: ok, log = build(current)
             if ok: w(GRN + "✔ koi error nahi mila\n" + R); continue
-            debug_view(current, log); old = open(current).read()
-            history = [{"role": "user", "parts": [{"text": "FILENAME: %s\nCode:\n```\n%s```\nError:\n%s\nPoori fixed file do (same format)." % (os.path.basename(current), old, log[:1800])}]}]
+            debug_view(current, log)
+            old = open(current).read()
+            history = [{"role": "user", "parts": [{"text":
+                "FILENAME: %s\nCode:\n```\n%s```\nError:\n%s\nPoori fixed file do (same format)." %
+                (os.path.basename(current), old, log[:1800])}]}]
             r = pipeline(history, key, old)
             if r: current = r
             continue
         if cmd == "/edit":
             if not current: w(YEL + "Pehle /open ya /paste\n" + R); continue
-            req = arg or input(CYN + "[?] kya change karna hai: " + R)
+            req = arg or input(RED + "[?] kya change karna hai: " + R)
             old = open(current).read()
-            history = [{"role": "user", "parts": [{"text": "FILENAME: %s\nExisting code:\n```\n%s```\nIsme yeh change karo aur poori updated file do:\n%s" % (os.path.basename(current), old, req)}]}]
+            history = [{"role": "user", "parts": [{"text":
+                "FILENAME: %s\nExisting code:\n```\n%s```\nIsme yeh change karo aur poori updated file do (same format):\n%s" %
+                (os.path.basename(current), old, req)}]}]
             r = pipeline(history, key, old)
             if r: current = r
             continue
@@ -491,7 +511,7 @@ def main():
         old = open(current).read() if (current and os.path.exists(current) and len(history) > 1) else None
         r = pipeline(history, key, old)
         if r: current = r
-        w(GRY + "\nTip: Try /audit for security check, or /serve to test HTML locally.\n" + R)
+        w(GRY + "\n/run chalayein, /edit se change karein, ya /show se file dekhein.\n" + R)
 
 if __name__ == "__main__":
     main()
