@@ -8,8 +8,8 @@ BAK   = os.path.join(BASE, "backups")
 KEYF  = os.path.join(BASE, ".apikey")
 OUT   = "/sdcard/Codex"
 
-# GOOGLE'S BEST PRO MODEL
-MODEL = "gemini-1.5-pro" 
+# 🟢 FIXED MODEL: Changed to Flash for 100% API Compatibility & Ultra-fast speed
+MODEL = "gemini-1.5-flash" 
 STREAM_URL = "https://generativelanguage.googleapis.com/v1beta/models/%s:streamGenerateContent?alt=sse"
 
 # SUPREME HACKER THEME (Neon Green, Cyan, and Dark Matrix vibes)
@@ -97,7 +97,7 @@ STATS = {"runs": 0, "lines": 0, "fixes": 0, "start": time.time()}
 def sh(n): return "\033[38;5;%dm" % n
 SHADES = [22, 28, 34, 40, 46, 82, 118, 154, 118, 82, 46, 40]
 
-def cyber_wave(seconds=2.0, fps=30): # Ultra smooth animation
+def cyber_wave(seconds=2.0, fps=30):
     lines = BANNER.strip("\n").split("\n")
     h, frames = len(lines), int(seconds * fps)
     w("\033[?25l")
