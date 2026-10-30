@@ -8,7 +8,7 @@ BAK   = os.path.join(BASE, "backups")
 KEYF  = os.path.join(BASE, ".apikey")
 OUT   = "/sdcard/Codex"
 
-# 🟢 FIXED MODEL: Changed to Flash for 100% API Compatibility & Ultra-fast speed
+# 🟢 100% WORKING MODEL: 'gemini-1.5-flash' (Supports all free API keys)
 MODEL = "gemini-1.5-flash" 
 STREAM_URL = "https://generativelanguage.googleapis.com/v1beta/models/%s:streamGenerateContent?alt=sse"
 
@@ -176,7 +176,7 @@ def show_file(path, marks=None):
 
 def get_key():
     if os.path.exists(KEYF): return open(KEYF).read().strip()
-    k = input(GRN + "[?] Kabbo, please enter API key: " + R).strip()
+    k = input(GRN + "[?] Developer Kabbo, please enter API key: " + R).strip()
     open(KEYF, "w").write(k); os.chmod(KEYF, 0o600); return k
 
 def stream_ai(history, key):
@@ -257,6 +257,11 @@ def main():
         if cmd == "/quit": break
         if cmd == "/new": history, current = [], None; banner(False); continue
         
+        # --- API KEY MANAGEMENT COMMAND ---
+        if cmd == "/key":
+            if os.path.exists(KEYF): os.remove(KEYF)
+            key = get_key(); continue
+
         # --- OMNI-ENGINEER COMMANDS ---
         if cmd == "/plan":
             w(CYN + B + "[PLANNING MODE ACTIVE]\n" + R)
